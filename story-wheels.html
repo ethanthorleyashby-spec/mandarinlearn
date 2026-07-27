@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>故事转盘 Story Wheels</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  padding: 24px 16px 60px;
+}
+
+/* ── Header ── */
+.header { text-align: center; padding: 10px 0 28px; }
+.header h1 {
+  color: white;
+  font-size: 2.4rem;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 30px rgba(150,130,255,0.7);
+  margin-bottom: 8px;
+}
+.header p { color: rgba(255,255,255,0.55); font-size: 0.95rem; }
+
+/* ── Wheels row ── */
+.wheels-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  max-width: 1160px;
+  margin: 0 auto 22px;
+  flex-wrap: wrap;
+}
+
+/* ── Wheel card ── */
+.wheel-card {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 24px;
+  padding: 20px 18px;
+  text-align: center;
+  min-width: 290px;
+  max-width: 355px;
+  flex: 1;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.wheel-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+
+.card-title {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+/* Category badges */
+.badges { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+.badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.4px;
+  opacity: 0.9;
+}
+
+/* Canvas wrapper */
+.canvas-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.wheel-canvas {
+  display: block;
+  border-radius: 50%;
+}
+.canvas-wrap:hover .wheel-canvas { filter: brightness(1.06); }
+.pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 24px solid white;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+  z-index: 5;
+}
+
+/* Result display */
+.result-display {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 12px 16px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 13px;
+  font-size: 1.6rem;
+  color: white;
+  font-weight: 800;
+  transition: background 0.3s;
+}
+.result-display.empty {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.35);
+  font-weight: 400;
+}
+.result-display.has-result {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Buttons */
+.card-buttons { display: flex; gap: 8px; justify-content: center; }
+.btn {
+  padding: 9px 22px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(0,0,0,0.35); }
+.btn:active { transform: translateY(0); }
+.btn-spin { background: linear-gradient(135deg, #7f7fd5, #86a8e7, #91eae4); color: #1a1a2e; }
+.btn-edit {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 0.8rem;
+  padding: 8px 16px;
+}
+
+/* ── Spin all ── */
+.global-area { text-align: center; margin-bottom: 24px; }
+.btn-all {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  font-size: 1.1rem;
+  padding: 14px 48px;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 24px rgba(245, 87, 108, 0.45);
+  letter-spacing: 0.3px;
+}
+.btn-all:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(245,87,108,0.55); }
+.btn-all:active { transform: translateY(0); }
+
+/* ── Story result ── */
+.story-box {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 24px;
+  padding: 26px 32px;
+  max-width: 900px;
+  margin: 0 auto 28px;
+  text-align: center;
+}
+.story-box h2 {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 18px;
+}
+.story-words {
+  font-size: 1.9rem;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.story-word {
+  padding: 6px 20px;
+  border-radius: 14px;
+  font-weight: 800;
+  border: 2px solid transparent;
+}
+.story-plus { color: rgba(255,255,255,0.25); font-size: 1.2rem; font-weight: 300; }
+.story-hint { color: rgba(255,255,255,0.35); font-size: 0.82rem; margin-top: 14px; }
+
+/* ── Tables ── */
+.tables-section { max-width: 1100px; margin: 0 auto; }
+.tables-section h2 {
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 16px;
+}
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+.table-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.table-card-header {
+  padding: 11px 16px;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.7);
+  font-weight: 700;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.vocab-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.vocab-table th {
+  padding: 8px 10px;
+  color: white;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.vocab-table td {
+  padding: 7px 10px;
+  color: rgba(255,255,255,0.82);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  text-align: center;
+}
+.vocab-table tr:last-child td { border-bottom: none; }
+.vocab-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+
+/* ── Modal ── */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-bg.open { display: flex; }
+.modal-box {
+  background: #1c1f3a;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 580px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+}
+.modal-box h2 { color: white; margin-bottom: 4px; font-size: 1.25rem; }
+.modal-note { color: rgba(255,255,255,0.45); font-size: 0.8rem; margin-bottom: 22px; }
+.modal-cat { margin-bottom: 22px; }
+.modal-cat label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 7px;
+}
+.cat-name-input {
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.07);
+  color: white;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  font-family: inherit;
+}
+.cat-name-input:focus { outline: none; border-color: rgba(255,255,255,0.45); }
+.modal-cat textarea {
+  width: 100%;
+  height: 148px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.07);
+  color: white;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.75;
+}
+.modal-cat textarea:focus { outline: none; border-color: rgba(255,255,255,0.45); }
+.modal-warning { color: rgba(255, 210, 100, 0.75); font-size: 0.73rem; margin-top: 5px; }
+.modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.btn-cancel { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.2); }
+.btn-save { background: linear-gradient(135deg, #7f7fd5, #86a8e7); color: white; padding: 10px 26px; }
+
+/* ── Result Popup ── */
+@keyframes rpop-in {
+  from { opacity: 0; transform: scale(0.82) translateY(24px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.rpop-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 400;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.rpop-bg.open { display: flex; }
+.rpop {
+  background: #1c1f3a;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 28px;
+  padding: 38px 40px 32px;
+  max-width: 520px;
+  width: 100%;
+  position: relative;
+  text-align: center;
+  animation: rpop-in 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.75);
+}
+.rpop-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: rgba(255,255,255,0.55);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 34px;
+  transition: background 0.15s, color 0.15s;
+}
+.rpop-close:hover { background: rgba(255,255,255,0.2); color: white; }
+.rpop-label {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  margin-bottom: 14px;
+}
+.rpop-big-word {
+  font-size: 4.2rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 16px;
+  text-shadow: 0 0 40px currentColor;
+}
+.rpop-cat-badge {
+  display: inline-block;
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1.5px solid transparent;
+  margin-bottom: 28px;
+}
+.rpop-divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 0 0 24px;
+}
+.rpop-all-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.rpop-all-word {
+  padding: 10px 22px;
+  border-radius: 16px;
+  font-size: 2rem;
+  font-weight: 900;
+  border: 2px solid transparent;
+}
+.rpop-all-plus { color: rgba(255,255,255,0.22); font-size: 1.3rem; font-weight: 300; }
+.rpop-all-cats {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+.rpop-all-cat {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.75;
+  letter-spacing: 0.5px;
+}
+.rpop-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* Spin animation */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(150,130,255,0); }
+  50% { box-shadow: 0 0 0 8px rgba(150,130,255,0.15); }
+}
+.wheel-card.spinning .wheel-canvas { animation: pulse-glow 0.6s infinite; border-radius: 50%; }
+
+@media (max-width: 640px) {
+  .header h1 { font-size: 1.7rem; }
+  .story-words { font-size: 1.4rem; }
+  .wheel-card { min-width: 260px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎡 故事转盘 Story Wheels</h1>
+  <p>Spin the wheels to generate a random story prompt! / 转动转盘，创造故事提示！</p>
+</div>
+
+<div class="wheels-row" id="wheelsRow"></div>
+
+<div class="global-area">
+  <button class="btn-all" onclick="spinAll()">🎲 Spin All Three Wheels!</button>
+</div>
+
+<div class="story-box">
+  <h2>✨ Your Story Prompt / 你的故事提示</h2>
+  <div class="story-words" id="storyWords">
+    <span style="font-size:1rem;color:rgba(255,255,255,0.28)">Spin the wheels to get started! / 开始转动转盘！</span>
+  </div>
+  <div class="story-hint">Use all three results to tell a story in Chinese! / 用三个结果来讲一个中文故事！</div>
+</div>
+
+<div class="tables-section">
+  <h2>📚 Vocabulary Reference / 词汇表</h2>
+  <div class="table-grid" id="tableGrid"></div>
+</div>
+
+<!-- Result Popup -->
+<div class="rpop-bg" id="rpopBg" onclick="handleRpopOverlay(event)">
+  <div class="rpop" id="rpop">
+    <button class="rpop-close" onclick="closeResultPopup()">✕</button>
+    <div id="rpopInner"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-bg" id="modalBg" onclick="handleOverlay(event)">
+  <div class="modal-box">
+    <h2 id="modalTitle">Edit Wheel</h2>
+    <p class="modal-note">One item per line. All three categories must have the same number of items.</p>
+    <div id="modalContent"></div>
+    <div class="modal-buttons">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-save" onclick="saveModal()">Save Changes ✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════
+const wheelData = [
+  {
+    id: 0,
+    name: "Wheel 1 — 谁？ Who?",
+    categories: [
+      {
+        name: "Animals 动物",
+        color: "#FF6B6B",
+        items:  ["狗","猫","熊猫","老虎","兔子","马","鸟","鱼","大象","狮子"],
+        pinyin: ["gǒu","māo","xióng māo","lǎo hǔ","tù zi","mǎ","niǎo","yú","dà xiàng","shī zi"]
+      },
+      {
+        name: "Nationalities 国籍",
+        color: "#FF9F43",
+        items:  ["美国人","中国人","英国人","法国人","日本人","韩国人","德国人","西班牙人","澳大利亚人","墨西哥人"],
+        pinyin: ["Měi guó rén","Zhōng guó rén","Yīng guó rén","Fǎ guó rén","Rì běn rén","Hán guó rén","Dé guó rén","Xī bān yá rén","Ào dà lì yà rén","Mò xī gē rén"]
+      },
+      {
+        name: "Professions 职业",
+        color: "#FECA57",
+        items:  ["学生","老师","医生","工程师","厨师","律师","警察","司机","护士","运动员"],
+        pinyin: ["xué shēng","lǎo shī","yī shēng","gōng chéng shī","chú shī","lǜ shī","jǐng chá","sī jī","hù shi","yùn dòng yuán"]
+      }
+    ]
+  },
+  {
+    id: 1,
+    name: "Wheel 2 — 哪里/何时？ Where/When?",
+    categories: [
+      {
+        name: "Places 地点",
+        color: "#26de81",
+        items:  ["图书馆","超市","公园","学校","医院","餐厅","电影院","海边","山上","家里"],
+        pinyin: ["tú shū guǎn","chāo shì","gōng yuán","xué xiào","yī yuàn","cān tīng","diàn yǐng yuàn","hǎi biān","shān shàng","jiā lǐ"]
+      },
+      {
+        name: "Sentence Patterns 句型",
+        color: "#2bcbba",
+        items:  ["快","慢","高兴地","一起","经常","会","要","又...又...","不...也不...","不但...而且..."],
+        pinyin: ["kuài","màn","gāo xìng de","yī qǐ","jīng cháng","huì","yào","yòu...yòu...","bù...yě bù...","bú dàn...ér qiě..."]
+      },
+      {
+        name: "Times 时间",
+        color: "#45aaf2",
+        items:  ["秋天","八月","早上","晚上","周末","明天","冬天","夏天","春天","下午"],
+        pinyin: ["qiū tiān","bā yuè","zǎo shang","wǎn shang","zhōu mò","míng tiān","dōng tiān","xià tiān","chūn tiān","xià wǔ"]
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: "Wheel 3 — 穿/做/天气 Clothes/Activity/Weather",
+    categories: [
+      {
+        name: "Clothes 衣服",
+        color: "#a29bfe",
+        items:  ["衬衫","裙子","裤子","外套","帽子","手套","围巾","靴子","毛衣","雨衣"],
+        pinyin: ["chèn shān","qún zi","kù zi","wài tào","mào zi","shǒu tào","wéi jīn","xuē zi","máo yī","yǔ yī"]
+      },
+      {
+        name: "Activities 活动",
+        color: "#fd79a8",
+        items:  ["滑雪","弹钢琴","游泳","跑步","看书","唱歌","跳舞","打篮球","画画","骑自行车"],
+        pinyin: ["huá xuě","tán gāng qín","yóu yǒng","pǎo bù","kàn shū","chàng gē","tiào wǔ","dǎ lán qiú","huà huà","qí zì xíng chē"]
+      },
+      {
+        name: "Weather 天气",
+        color: "#e17055",
+        items:  ["雷雨","下冰雹","晴天","下雪","刮风","下雨","阴天","有雾","打雷","闪电"],
+        pinyin: ["léi yǔ","xià bīng báo","qíng tiān","xià xuě","guā fēng","xià yǔ","yīn tiān","yǒu wù","dǎ léi","shǎn diàn"]
+      }
+    ]
+  }
+];
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const CS = 300;   // canvas size (px)
+const CR = 132;   // wheel radius
+const CC = CS / 2;
+
+const states = wheelData.map(() => ({
+  rotation: Math.random() * Math.PI * 2,
+  velocity: 0,
+  spinning: false,
+  result: null,
+  animFrame: null,
+  lastSlice: -1
+}));
+
+let editingIdx = null;
+let audioCtx = null;
+let spinningAll = false;
+
+// ════════════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════════════
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTick(vol) {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 550 + Math.random() * 180;
+    g.gain.setValueAtTime(Math.min(0.28, vol), ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
+    osc.start(); osc.stop(ctx.currentTime + 0.05);
+  } catch(e) {}
+}
+
+function playFanfare() {
+  try {
+    const ctx = getAudio();
+    // ta-da pattern: C C C E G C(long) + G harmony
+    const notes = [
+      [523.25, 0.00, 0.10],
+      [523.25, 0.12, 0.10],
+      [523.25, 0.24, 0.10],
+      [659.25, 0.36, 0.09],
+      [783.99, 0.46, 0.09],
+      [1046.5, 0.56, 0.70],
+      [783.99, 0.56, 0.70],
+    ];
+    notes.forEach(([freq, when, dur]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      // vibrato
+      const vib = ctx.createOscillator();
+      const vg = ctx.createGain();
+      vib.frequency.value = 6; vg.gain.value = 7;
+      vib.connect(vg); vg.connect(osc.frequency);
+      const t = ctx.currentTime + when;
+      vib.start(t); vib.stop(t + dur + 0.05);
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.linearRampToValueAtTime(0.28, t + 0.03);
+      g.gain.setValueAtTime(0.22, t + dur - 0.08);
+      g.gain.linearRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.05);
+    });
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+//  WHEEL HELPERS
+// ════════════════════════════════════════════
+
+/** Concatenate categories in order so unequal item counts work fine */
+function getItems(wi) {
+  const result = [];
+  wheelData[wi].categories.forEach(cat =>
+    cat.items.forEach(item => result.push({ text: item, color: cat.color }))
+  );
+  return result;
+}
+
+function getSelectedIndex(wi) {
+  const st = states[wi];
+  const items = getItems(wi);
+  const n = items.length;
+  const TWO_PI = Math.PI * 2;
+  const norm = ((-st.rotation) % TWO_PI + TWO_PI) % TWO_PI;
+  return Math.floor(norm / (TWO_PI / n)) % n;
+}
+
+function lighten(hex, amt) {
+  const r = Math.min(255, Math.max(0, parseInt(hex.slice(1,3),16) + amt));
+  const g = Math.min(255, Math.max(0, parseInt(hex.slice(3,5),16) + amt));
+  const b = Math.min(255, Math.max(0, parseInt(hex.slice(5,7),16) + amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+// ════════════════════════════════════════════
+//  DRAWING
+// ════════════════════════════════════════════
+function drawWheel(wi) {
+  const canvas = document.getElementById(`canvas-${wi}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const st = states[wi];
+  const items = getItems(wi);
+  const n = items.length;
+  const TWO_PI = Math.PI * 2;
+  const sliceAngle = TWO_PI / n;
+  const selIdx = getSelectedIndex(wi);
+
+  ctx.clearRect(0, 0, CS, CS);
+
+  // Drop shadow ring
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 6;
+  ctx.beginPath();
+  ctx.arc(CC, CC, CR + 3, 0, TWO_PI);
+  ctx.fillStyle = '#1c1f3a';
+  ctx.fill();
+  ctx.restore();
+
+  // Draw slices
+  for (let i = 0; i < n; i++) {
+    const sa = st.rotation + i * sliceAngle - Math.PI / 2;
+    const ea = sa + sliceAngle;
+    const midA = sa + sliceAngle / 2;
+    const { text, color } = items[i];
+    const isSelected = !st.spinning && st.result !== null && i === selIdx;
+
+    ctx.beginPath();
+    ctx.moveTo(CC, CC);
+    ctx.arc(CC, CC, CR, sa, ea);
+    ctx.closePath();
+
+    // Subtle zebra: alternate every full "row" of 3
+    const row = Math.floor(i / wheelData[wi].categories.length);
+    const tweak = row % 2 === 0 ? 0 : -18;
+    ctx.fillStyle = isSelected ? lighten(color, 55) : lighten(color, tweak);
+    ctx.fill();
+
+    // Divider
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Label text — radial, right-aligned toward rim
+    ctx.save();
+    ctx.translate(CC, CC);
+    ctx.rotate(midA);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold 10px Arial, sans-serif`;
+    ctx.fillStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.88)';
+    if (isSelected) { ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 5; }
+    // Truncate at 4 chars for wheel display
+    ctx.fillText(text.length > 4 ? text.slice(0,4) : text, CR - 7, 0);
+    ctx.restore();
+  }
+
+  // Highlight rim on selected slice
+  if (!st.spinning && st.result !== null) {
+    const sa = st.rotation + selIdx * sliceAngle - Math.PI / 2;
+    const ea = sa + sliceAngle;
+    ctx.beginPath();
+    ctx.moveTo(CC, CC);
+    ctx.arc(CC, CC, CR, sa, ea);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  // Outer border ring
+  ctx.beginPath();
+  ctx.arc(CC, CC, CR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Center hub
+  const hubGrad = ctx.createRadialGradient(CC, CC, 0, CC, CC, 20);
+  hubGrad.addColorStop(0, '#5a4aaa');
+  hubGrad.addColorStop(1, '#1c1f3a');
+  ctx.beginPath();
+  ctx.arc(CC, CC, 20, 0, Math.PI * 2);
+  ctx.fillStyle = hubGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'white';
+  ctx.fillText('✦', CC, CC + 1);
+}
+
+// ════════════════════════════════════════════
+//  SPIN ANIMATION
+// ════════════════════════════════════════════
+function spinWheel(wi) {
+  const st = states[wi];
+  if (st.spinning) return;
+  if (st.animFrame) cancelAnimationFrame(st.animFrame);
+
+  st.velocity = 0.18 + Math.random() * 0.22;
+  st.spinning = true;
+  st.result = null;
+  st.lastSlice = -1;
+
+  const card = document.getElementById(`card-${wi}`);
+  const resultEl = document.getElementById(`result-${wi}`);
+  if (card) card.classList.add('spinning');
+  if (resultEl) { resultEl.textContent = '...'; resultEl.className = 'result-display empty'; }
+
+  updateStory();
+
+  function step() {
+    st.rotation += st.velocity;
+    st.velocity *= 0.9865;
+
+    // Tick sound at each slice boundary crossing
+    const items = getItems(wi);
+    const n = items.length;
+    const norm = (st.rotation % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+    const curSlice = Math.floor(norm / (Math.PI*2 / n)) % n;
+    if (curSlice !== st.lastSlice) {
+      st.lastSlice = curSlice;
+      playTick(Math.min(0.28, st.velocity * 2.2));
+    }
+
+    drawWheel(wi);
+
+    if (st.velocity > 0.0018) {
+      st.animFrame = requestAnimationFrame(step);
+    } else {
+      // Stopped
+      st.velocity = 0;
+      st.spinning = false;
+      if (card) card.classList.remove('spinning');
+
+      const sel = getItems(wi)[getSelectedIndex(wi)];
+      st.result = sel.text;
+
+      if (resultEl) {
+        resultEl.textContent = sel.text;
+        resultEl.className = 'result-display has-result';
+      }
+
+      drawWheel(wi);
+      updateStory();
+
+      if (states.every(s => s.result !== null && !s.spinning)) {
+        spinningAll = false;
+        setTimeout(() => { playFanfare(); showAllPopup(); }, 220);
+      } else if (!spinningAll) {
+        setTimeout(() => showSinglePopup(wi), 200);
+      }
+    }
+  }
+
+  st.animFrame = requestAnimationFrame(step);
+}
+
+function spinAll() {
+  spinningAll = true;
+  wheelData.forEach((_, i) => setTimeout(() => spinWheel(i), i * 320));
+}
+
+// ════════════════════════════════════════════
+//  RESULT POPUP
+// ════════════════════════════════════════════
+function getCatForItem(wi, text) {
+  for (const cat of wheelData[wi].categories) {
+    if (cat.items.includes(text)) return cat;
+  }
+  return null;
+}
+
+function getPinyin(wi, text) {
+  for (const cat of wheelData[wi].categories) {
+    const idx = cat.items.indexOf(text);
+    if (idx !== -1 && cat.pinyin && cat.pinyin[idx]) return cat.pinyin[idx];
+  }
+  return '';
+}
+
+function showSinglePopup(wi) {
+  const text = states[wi].result;
+  if (!text) return;
+  const cat = getCatForItem(wi, text);
+  const color = cat ? cat.color : ACCENT[wi];
+  const catName = cat ? cat.name : '';
+  const wheelName = wheelData[wi].name;
+
+  const pinyin = getPinyin(wi, text);
+  document.getElementById('rpopInner').innerHTML = `
+    <div class="rpop-label">${escHtml(wheelName)}</div>
+    <div class="rpop-big-word" style="color:${color}">${escHtml(text)}</div>
+    ${pinyin ? `<div style="color:rgba(255,255,255,0.5);font-size:1.15rem;font-style:italic;margin-top:-10px;margin-bottom:16px">${escHtml(pinyin)}</div>` : ''}
+    ${catName ? `<div class="rpop-cat-badge" style="color:${color};background:${color}22;border-color:${color}55">${escHtml(catName)}</div>` : ''}
+    <hr class="rpop-divider">
+    <div class="rpop-buttons">
+      <button class="btn btn-spin" onclick="closeResultPopup()">好的！ Got it!</button>
+    </div>
+  `;
+  document.getElementById('rpopBg').classList.add('open');
+}
+
+function showAllPopup() {
+  const results = states.map(s => s.result);
+  const allWordHTML = results.map((r, i) => {
+    const color = ACCENT[i];
+    const py = getPinyin(i, r);
+    return `<span class="rpop-all-word" style="color:${color};background:${color}22;border-color:${color}55">${escHtml(r)}${py ? `<div style="font-size:0.75rem;font-style:italic;opacity:0.65;font-weight:400;margin-top:4px">${escHtml(py)}</div>` : ''}</span>`;
+  }).join('<span class="rpop-all-plus">+</span>');
+
+  const catLabels = results.map((r, i) => {
+    const cat = getCatForItem(i, r);
+    return cat ? `<span class="rpop-all-cat" style="color:${ACCENT[i]}">${escHtml(cat.name)}</span>` : '';
+  }).join('');
+
+  document.getElementById('rpopInner').innerHTML = `
+    <div class="rpop-label" style="color:rgba(255,255,255,0.6);font-size:0.9rem;letter-spacing:1px;margin-bottom:20px">🎉 Your Story Prompt! / 你的故事提示！</div>
+    <div class="rpop-all-row">${allWordHTML}</div>
+    <div class="rpop-all-cats" style="margin-bottom:22px">${catLabels}</div>
+    <hr class="rpop-divider">
+    <div style="color:rgba(255,255,255,0.38);font-size:0.82rem;margin-bottom:20px">Use these words to tell a story in Chinese! / 用这些词来讲故事！</div>
+    <div class="rpop-buttons">
+      <button class="btn btn-spin" onclick="closeResultPopup();spinAll()">🎲 Spin Again!</button>
+      <button class="btn btn-edit" onclick="closeResultPopup()">Close</button>
+    </div>
+  `;
+  document.getElementById('rpopBg').classList.add('open');
+}
+
+function closeResultPopup() {
+  document.getElementById('rpopBg').classList.remove('open');
+}
+
+function handleRpopOverlay(e) {
+  if (e.target.id === 'rpopBg') closeResultPopup();
+}
+
+// Close popups with Escape
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('rpopBg').classList.contains('open')) closeResultPopup();
+  else if (document.getElementById('modalBg').classList.contains('open')) closeModal();
+});
+
+// ════════════════════════════════════════════
+//  STORY DISPLAY
+// ════════════════════════════════════════════
+const ACCENT = ['#FF6B6B', '#26de81', '#a29bfe'];
+
+function updateStory() {
+  const el = document.getElementById('storyWords');
+  if (!el) return;
+  const results = states.map(s => s.result);
+
+  if (results.every(r => !r)) {
+    el.innerHTML = '<span style="font-size:1rem;color:rgba(255,255,255,0.28)">Spin the wheels to get started! / 开始转动转盘！</span>';
+    return;
+  }
+
+  el.innerHTML = results.map((r, i) => {
+    if (r) {
+      return `<span class="story-word" style="color:${ACCENT[i]};background:${ACCENT[i]}22;border-color:${ACCENT[i]}66">${r}</span>`;
+    }
+    return `<span style="color:rgba(255,255,255,0.2);font-size:0.9rem">[Wheel ${i+1}]</span>`;
+  }).join('<span class="story-plus">+</span>');
+}
+
+// ════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════
+function openModal(wi) {
+  editingIdx = wi;
+  const w = wheelData[wi];
+  document.getElementById('modalTitle').textContent = `✏️ Edit ${w.name}`;
+  document.getElementById('modalContent').innerHTML = w.categories.map((cat, ci) => `
+    <div class="modal-cat">
+      <label style="color:${cat.color}">
+        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${cat.color}"></span>
+        Category ${ci+1}
+      </label>
+      <input class="cat-name-input" id="mname-${ci}" type="text" value="${escHtml(cat.name)}" placeholder="Category name">
+      <textarea id="mitems-${ci}">${cat.items.map(escHtml).join('\n')}</textarea>
+      <div class="modal-warning">${cat.items.length} items — categories can have different amounts</div>
+    </div>
+  `).join('');
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('open');
+  editingIdx = null;
+}
+
+function handleOverlay(e) { if (e.target.id === 'modalBg') closeModal(); }
+
+function saveModal() {
+  if (editingIdx === null) return;
+  const w = wheelData[editingIdx];
+  const newItems = w.categories.map((_, ci) =>
+    document.getElementById(`mitems-${ci}`).value
+      .split('\n').map(s => s.trim()).filter(Boolean)
+  );
+  const lens = newItems.map(a => a.length);
+  if (lens.some(l => l === 0)) { alert('Please add at least one item to each category.'); return; }
+
+  w.categories.forEach((cat, ci) => {
+    cat.name = document.getElementById(`mname-${ci}`).value.trim() || cat.name;
+    cat.items = newItems[ci];
+  });
+
+  states[editingIdx].rotation = Math.random() * Math.PI * 2;
+  states[editingIdx].result = null;
+
+  closeModal();
+  renderAll();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════
+function renderWheels() {
+  const row = document.getElementById('wheelsRow');
+  row.innerHTML = '';
+  wheelData.forEach((w, wi) => {
+    const div = document.createElement('div');
+    div.className = 'wheel-card';
+    div.id = `card-${wi}`;
+    div.innerHTML = `
+      <div class="card-title">${w.name}</div>
+      <div class="badges">${w.categories.map(c => `<span class="badge" style="background:${c.color}">${c.name}</span>`).join('')}</div>
+      <div class="canvas-wrap" onclick="spinWheel(${wi})">
+        <div class="pointer"></div>
+        <canvas id="canvas-${wi}" width="${CS}" height="${CS}" class="wheel-canvas"></canvas>
+      </div>
+      <div class="result-display empty" id="result-${wi}">Click to spin!</div>
+      <div class="card-buttons">
+        <button class="btn btn-spin" onclick="event.stopPropagation();spinWheel(${wi})">🎡 Spin!</button>
+        <button class="btn btn-edit"  onclick="event.stopPropagation();openModal(${wi})">✏️ Edit</button>
+      </div>
+    `;
+    row.appendChild(div);
+    requestAnimationFrame(() => drawWheel(wi));
+  });
+}
+
+function renderTables() {
+  const grid = document.getElementById('tableGrid');
+  grid.innerHTML = '';
+  wheelData.forEach(w => {
+    const n = Math.max(...w.categories.map(c => c.items.length));
+    const div = document.createElement('div');
+    div.className = 'table-card';
+    div.innerHTML = `
+      <div class="table-card-header">${w.name}</div>
+      <table class="vocab-table">
+        <thead>
+          <tr>${w.categories.map(c => `<th style="background:${c.color}44;color:${c.color}">${c.name}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          ${Array.from({length:n},(_,i) =>
+            `<tr>${w.categories.map(c => {
+              const word = c.items[i] || '';
+              const py = c.pinyin && c.pinyin[i] ? c.pinyin[i] : '';
+              return `<td>${escHtml(word)}${py ? `<div style="font-size:0.7rem;color:rgba(255,255,255,0.42);margin-top:2px;font-style:italic">${escHtml(py)}</div>` : ''}</td>`;
+            }).join('')}</tr>`
+          ).join('')}
+        </tbody>
+      </table>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function renderAll() { renderWheels(); renderTables(); updateStory(); }
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+renderAll();
+</script>
+</body>
+</html>
